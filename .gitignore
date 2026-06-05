@@ -1,0 +1,48 @@
+# Built application files
+*.apk
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Gradle cache and generated files
+.gradle/
+gen/
+out/
+**/build/
+build/
+
+# Gradle wrapper
+# Keep gradlew for reproducibility — only ignore if you prefer system gradle
+# gradle/
+# gradlew
+# gradlew.bat
+
+# Local configuration file (sdk path, etc.)
+local.properties
+
+# Sensitive or configuration files
+*.keystore
+*.jks
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Room schema exports (optional — uncomment if you want to track schema migrations)
+# app/schemas/
+
+# Log files
+*.log
