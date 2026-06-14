@@ -9,8 +9,9 @@
 # Java class files
 *.class
 
-# Gradle cache and generated files
+# Gradle and Kotlin cache
 .gradle/
+.kotlin/
 gen/
 out/
 **/build/

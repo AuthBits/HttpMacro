@@ -59,7 +59,86 @@ class MainActivity : AppCompatActivity() {
             if (isEdit) setSelection(listOf("GET", "POST", "PUT", "DELETE").indexOfFirst { it == macro?.method }.takeIf { it >= 0 } ?: 0)
         }
         val bodyInput = EditText(this).apply { hint = "Body (for POST/PUT)"; inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE; maxLines = 4; setText(macro?.body ?: "") }
-        val headersInput = EditText(this).apply { hint = "Headers (one per line, e.g. Content-Type: application/json)"; inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE; maxLines = 4; setText(macro?.headers ?: "") }
+
+        // ---- Modular headers section ----
+        val headersContainer = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+        }
+        val headerPairs = mutableListOf<Pair<EditText, EditText>>()
+
+        fun rebuildHeaders(): String {
+            return headerPairs.map { (k, v) ->
+                val key = k.text.toString().trim()
+                val value = v.text.toString().trim()
+                if (key.isNotEmpty()) "$key: $value" else ""
+            }.filter { it.isNotEmpty() }.joinToString("\n")
+        }
+
+        fun addHeaderRow(key: String = "", value: String = "") {
+            val row = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, 0, 0, 8.dp)
+            }
+            val keyEt = EditText(this).apply {
+                hint = "Key"
+                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                setText(key)
+            }
+            val colon = android.widget.TextView(this).apply {
+                text = ":"
+                textSize = 16f
+                setPadding(8.dp, 0, 8.dp, 0)
+                layoutParams = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
+            }
+            val valueEt = EditText(this).apply {
+                hint = "Value"
+                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                setText(value)
+            }
+            val removeBtn = android.widget.Button(this).apply {
+                text = "\u2715"
+                minWidth = 48.dp
+                setPadding(8.dp, 0, 8.dp, 0)
+                setBackgroundResource(android.R.color.transparent)
+                setOnClickListener {
+                    headersContainer.removeView(row)
+                    headerPairs.removeAt(headerPairs.indexOfFirst { it.first == keyEt })
+                }
+            }
+            row.addView(keyEt)
+            row.addView(colon)
+            row.addView(valueEt)
+            row.addView(removeBtn)
+            headersContainer.addView(row)
+            headerPairs.add(keyEt to valueEt)
+
+            // Rebuild headers string on any change
+            val listener = object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { rebuildHeaders() }
+                override fun afterTextChanged(s: android.text.Editable?) {}
+            }
+            keyEt.addTextChangedListener(listener)
+            valueEt.addTextChangedListener(listener)
+        }
+
+        // Pre-populate existing headers
+        if (macro?.headers?.isNotBlank() == true) {
+            for (line in macro.headers.split("\n")) {
+                val parts = line.split(":", limit = 2)
+                if (parts.size == 2) {
+                    addHeaderRow(parts[0].trim(), parts[1].trim())
+                }
+            }
+        }
+
+        val addHeaderBtn = android.widget.Button(this).apply {
+            text = "+ Add Header"
+            setPadding(0, 4.dp, 0, 4.dp)
+            setBackgroundResource(android.R.color.transparent)
+            setOnClickListener { addHeaderRow() }
+        }
 
         val form = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
@@ -67,8 +146,9 @@ class MainActivity : AppCompatActivity() {
             addView(nameInput)
             addView(urlInput)
             addView(methodSpinner)
+            addView(headersContainer)
+            addView(addHeaderBtn)
             addView(bodyInput)
-            addView(headersInput)
         }
 
         AlertDialog.Builder(this)
@@ -87,7 +167,7 @@ class MainActivity : AppCompatActivity() {
                     url = url,
                     method = methodSpinner.selectedItem.toString(),
                     body = bodyInput.text.toString().trim(),
-                    headers = headersInput.text.toString().trim()
+                    headers = rebuildHeaders()
                 )
                 if (isEdit) {
                     db.dao().update(entry)
