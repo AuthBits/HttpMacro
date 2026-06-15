@@ -2,6 +2,8 @@ package com.httpmacro.app
 
 import android.content.Context
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.*
@@ -15,7 +17,11 @@ data class MacroEntry(
     val url: String,
     val method: String,          // GET, POST, PUT, DELETE
     val body: String = "",
-    val headers: String = ""     // one "Key: Value" per line
+    val headers: String = "",    // one "Key: Value" per line
+    val displayType: String = "notification",  // "notification" or "popup"
+    val responseLimit: Int = 500,  // max chars to display
+    val showToast: Boolean = true,  // show "Firing: X" toast
+    val playMp3: Boolean = false  // play MP3 if response is audio/mpeg
 )
 
 @Dao
@@ -36,7 +42,7 @@ interface MacroDao {
     fun delete(entry: MacroEntry)
 }
 
-@Database(entities = [MacroEntry::class], version = 1, exportSchema = false)
+@Database(entities = [MacroEntry::class], version = 4, exportSchema = false)
 abstract class HttpMacroDatabase : RoomDatabase() {
     abstract fun dao(): MacroDao
     companion object {
@@ -47,23 +53,51 @@ abstract class HttpMacroDatabase : RoomDatabase() {
                     ctx.applicationContext,
                     HttpMacroDatabase::class.java,
                     "httpmacro.db"
-                ).allowMainThreadQueries().build().also { INSTANCE = it }
+                )
+                    .allowMainThreadQueries()
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .build().also { INSTANCE = it }
             }
+
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE macros ADD COLUMN displayType TEXT NOT NULL DEFAULT 'notification'")
+                db.execSQL("ALTER TABLE macros ADD COLUMN responseLimit INTEGER NOT NULL DEFAULT 500")
+            }
+        }
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE macros ADD COLUMN showToast INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE macros ADD COLUMN playMp3 INTEGER NOT NULL DEFAULT 0")
+            }
+        }
     }
 }
 
 /* ---- HTTP Executor (OkHttp, fire-and-forget on a Thread) ---- */
 object HttpExecutor {
     private val client = OkHttpClient.Builder()
-        .callTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .callTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 
     private val JSON = "application/json; charset=utf-8".toMediaType()
 
     /**
-     * Returns (statusCode: Int, bodySnippet: String) or throws IOException.
+     * Returns [HttpResult] with status code, content type, and body bytes.
      */
-    fun execute(entry: MacroEntry): Pair<Int, String> {
+    data class HttpResult(val code: Int, val contentType: String?, val body: ByteArray)
+
+    /**
+     * Execute the macro's HTTP request. Returns [HttpResult].
+     */
+    fun execute(entry: MacroEntry): HttpResult {
         val requestBuilder = Request.Builder().url(entry.url)
 
         // Parse method
@@ -93,8 +127,9 @@ object HttpExecutor {
 
         return client.newCall(request).execute().use { response ->
             val code = response.code
-            val bodySnippet = response.body?.string()?.take(200) ?: "(no body)"
-            code to bodySnippet
+            val contentType = response.body?.contentType()?.toString()
+            val body = response.body?.bytes() ?: byteArrayOf()
+            HttpResult(code, contentType, body)
         }
     }
 }

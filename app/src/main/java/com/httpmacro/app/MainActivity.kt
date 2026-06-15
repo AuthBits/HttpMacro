@@ -60,6 +60,25 @@ class MainActivity : AppCompatActivity() {
         }
         val bodyInput = EditText(this).apply { hint = "Body (for POST/PUT)"; inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE; maxLines = 4; setText(macro?.body ?: "") }
 
+        // ---- Response limit ----
+        val limitInput = EditText(this).apply {
+            hint = "Response limit (chars)"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText((macro?.responseLimit ?: 500).toString())
+        }
+
+        // ---- Show toast checkbox ----
+        val toastCheck = android.widget.CheckBox(this).apply {
+            text = "Show \"Firing\" toast"
+            isChecked = macro?.showToast ?: true
+        }
+
+        // ---- Play MP3 checkbox ----
+        val mp3Check = android.widget.CheckBox(this).apply {
+            text = "Play MP3 received in response"
+            isChecked = macro?.playMp3 ?: false
+        }
+
         // ---- Modular headers section ----
         val headersContainer = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
@@ -149,6 +168,24 @@ class MainActivity : AppCompatActivity() {
             addView(headersContainer)
             addView(addHeaderBtn)
             addView(bodyInput)
+
+            // Spacer
+            addView(android.widget.Space(this@MainActivity).apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    16.dp
+                )
+            })
+
+            addView(android.widget.TextView(this@MainActivity).apply {
+                text = "Response limit (chars)"
+                textSize = 12f
+                setPadding(0, 0, 0, 4.dp)
+            })
+            addView(limitInput)
+
+            addView(toastCheck)
+            addView(mp3Check)
         }
 
         AlertDialog.Builder(this)
@@ -167,7 +204,10 @@ class MainActivity : AppCompatActivity() {
                     url = url,
                     method = methodSpinner.selectedItem.toString(),
                     body = bodyInput.text.toString().trim(),
-                    headers = rebuildHeaders()
+                    headers = rebuildHeaders(),
+                    responseLimit = limitInput.text.toString().toIntOrNull() ?: 500,
+                    showToast = toastCheck.isChecked,
+                    playMp3 = mp3Check.isChecked
                 )
                 if (isEdit) {
                     db.dao().update(entry)
