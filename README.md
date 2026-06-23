@@ -4,11 +4,12 @@ An Android app for storing and triggering HTTP request macros — perfect for qu
 
 ## Features
 
-- **Macro management** — Create, edit, and delete HTTP request macros with name, URL, method (GET/POST/PUT/DELETE), body, and custom headers
+- **Macro management** — Create, edit, and delete HTTP request macros with name, URL, method (GET/POST/PUT/DELETE), body, custom headers, and response options
 - **Persistent storage** — All macros saved locally with Room database
 - **Dynamic shortcuts** — Each macro gets a system launcher shortcut for one-tap triggering
 - **Custom URI scheme** — Trigger macros externally via `httpmacro://trigger/{id}`
 - **Notifications** — Response status code and body snippet shown in Toast + notification
+- **Clipboard** — Save text or image responses to clipboard for quick paste elsewhere
 
 ## Architecture
 

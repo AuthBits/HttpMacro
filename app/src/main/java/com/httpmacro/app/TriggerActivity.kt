@@ -1,5 +1,9 @@
 package com.httpmacro.app
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.net.Uri
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.util.Base64
@@ -7,6 +11,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.FileProvider
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -65,6 +70,11 @@ class TriggerActivity : AppCompatActivity() {
                     } else if (entry.playMp3 && isMp3Response(result)) {
                         // Raw MP3 response
                         playMp3(entry.name, result.code, "", result.body)
+                    } else if (entry.saveClipboard) {
+                        // Clipboard: text or image
+                        val resultText = saveToClipboard(entry.name, result, limit)
+                        val bodySnippet = resultText.take(limit)
+                        showNotification(entry.name, "HTTP ${result.code}\n\n$bodySnippet")
                     } else {
                         val bodySnippet = bodyStr.take(limit)
                         showNotification(entry.name, "HTTP ${result.code}\n\n$bodySnippet")
@@ -78,6 +88,64 @@ class TriggerActivity : AppCompatActivity() {
         }.start()
 
         finish()
+    }
+
+    /** Check if the response is an image based on content type. */
+    private fun isImageResponse(result: HttpExecutor.HttpResult): Boolean {
+        result.contentType?.let { ct ->
+            val lower = ct.lowercase()
+            if (lower.contains("image/png") ||
+                lower.contains("image/jpeg") ||
+                lower.contains("image/jpg") ||
+                lower.contains("image/gif") ||
+                lower.contains("image/webp")) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /** Save the response to clipboard — text or image. Returns a display string. */
+    private fun saveToClipboard(title: String, result: HttpExecutor.HttpResult, limit: Int): String {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+
+        if (isImageResponse(result)) {
+            // Save image to temp file and serve via ClipboardContentProvider.
+            // ClipData.newUri() queries the provider for MIME type and stores it in
+            // ClipDescription — pasting apps (messaging, email) read the image stream.
+            val mime = result.contentType ?: "image/png"
+            val ext = when {
+                mime.contains("jpeg") || mime.contains("jpg") -> "jpg"
+                mime.contains("gif") -> "gif"
+                mime.contains("webp") -> "webp"
+                else -> "png"
+            }
+            val tempFile = File(cacheDir, "httpmacro_clip_${System.currentTimeMillis()}.$ext")
+            tempFile.writeBytes(result.body)
+
+            // Clear any previous clipboard image
+            ClipboardContentProvider.clear()
+            ClipboardContentProvider.setImage(tempFile, mime)
+
+            val contentUri = Uri.parse("content://com.httpmacro.app.clipboard/image/${tempFile.name}")
+            clipboard.setPrimaryClip(
+                ClipData.newUri(contentResolver, "Image from $title (HTTP ${result.code})", contentUri)
+            )
+
+            // Clean up temp file after 5 minutes (long enough for pasting)
+            android.os.Handler(mainLooper).postDelayed({
+                ClipboardContentProvider.clear()
+            }, 300_000)
+
+            return "Image saved to clipboard (${result.body.size} bytes)"
+        }
+
+        // Text response
+        val bodyStr = String(result.body).take(limit)
+        clipboard.setPrimaryClip(
+            ClipData.newPlainText("HttpMacro: $title", bodyStr)
+        )
+        return bodyStr
     }
 
     /** Check if the response looks like a raw MP3 based on content type or magic bytes. */

@@ -36,7 +36,25 @@
             </intent-filter>
         </activity>
 
+        <!-- ContentProvider for clipboard images — serves image bytes as a stream
+             so pasting apps (messaging, email, etc.) can read them via content:// URI.
+             Must be exported=true so other apps can acquire the provider cross-process. -->
+        <provider
+            android:name=".ClipboardContentProvider"
+            android:authorities="com.httpmacro.app.clipboard"
+            android:exported="true"
+            android:grantUriPermissions="true" />
 
+        <!-- FileProvider for sharing clipboard images -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.httpmacro.app.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider_paths" />
+        </provider>
 
     </application>
 </manifest>

@@ -79,6 +79,12 @@ class MainActivity : AppCompatActivity() {
             isChecked = macro?.playMp3 ?: false
         }
 
+        // ---- Save to clipboard checkbox ----
+        val clipboardCheck = android.widget.CheckBox(this).apply {
+            text = "Save result to clipboard"
+            isChecked = macro?.saveClipboard ?: false
+        }
+
         // ---- Modular headers section ----
         val headersContainer = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
@@ -186,6 +192,7 @@ class MainActivity : AppCompatActivity() {
 
             addView(toastCheck)
             addView(mp3Check)
+            addView(clipboardCheck)
         }
 
         AlertDialog.Builder(this)
@@ -207,7 +214,8 @@ class MainActivity : AppCompatActivity() {
                     headers = rebuildHeaders(),
                     responseLimit = limitInput.text.toString().toIntOrNull() ?: 500,
                     showToast = toastCheck.isChecked,
-                    playMp3 = mp3Check.isChecked
+                    playMp3 = mp3Check.isChecked,
+                    saveClipboard = clipboardCheck.isChecked
                 )
                 if (isEdit) {
                     db.dao().update(entry)

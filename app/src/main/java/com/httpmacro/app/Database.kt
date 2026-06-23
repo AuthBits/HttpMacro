@@ -21,7 +21,8 @@ data class MacroEntry(
     val displayType: String = "notification",  // "notification" or "popup"
     val responseLimit: Int = 500,  // max chars to display
     val showToast: Boolean = true,  // show "Firing: X" toast
-    val playMp3: Boolean = false  // play MP3 if response is audio/mpeg
+    val playMp3: Boolean = false,  // play MP3 if response is audio/mpeg
+    val saveClipboard: Boolean = false  // save text/image result to clipboard
 )
 
 @Dao
@@ -42,7 +43,7 @@ interface MacroDao {
     fun delete(entry: MacroEntry)
 }
 
-@Database(entities = [MacroEntry::class], version = 4, exportSchema = false)
+@Database(entities = [MacroEntry::class], version = 5, exportSchema = false)
 abstract class HttpMacroDatabase : RoomDatabase() {
     abstract fun dao(): MacroDao
     companion object {
@@ -55,7 +56,7 @@ abstract class HttpMacroDatabase : RoomDatabase() {
                     "httpmacro.db"
                 )
                     .allowMainThreadQueries()
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build().also { INSTANCE = it }
             }
 
@@ -73,6 +74,11 @@ abstract class HttpMacroDatabase : RoomDatabase() {
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE macros ADD COLUMN playMp3 INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE macros ADD COLUMN saveClipboard INTEGER NOT NULL DEFAULT 0")
             }
         }
     }
