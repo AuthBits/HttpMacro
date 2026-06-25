@@ -85,6 +85,12 @@ class MainActivity : AppCompatActivity() {
             isChecked = macro?.saveClipboard ?: false
         }
 
+        // ---- Show notification checkbox ----
+        val notificationCheck = android.widget.CheckBox(this).apply {
+            text = "Show notification"
+            isChecked = macro?.showNotification ?: true
+        }
+
         // ---- Modular headers section ----
         val headersContainer = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
@@ -165,6 +171,9 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { addHeaderRow() }
         }
 
+        val scroll = android.widget.ScrollView(this).apply {
+            isFillViewport = true
+        }
         val form = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
             setPadding(32.dp, 32.dp, 32.dp, 32.dp)
@@ -193,11 +202,13 @@ class MainActivity : AppCompatActivity() {
             addView(toastCheck)
             addView(mp3Check)
             addView(clipboardCheck)
+            addView(notificationCheck)
         }
 
+        scroll.addView(form)
         AlertDialog.Builder(this)
             .setTitle(title)
-            .setView(form)
+            .setView(scroll)
             .setPositiveButton("Save") { _, _ ->
                 val name = nameInput.text.toString().trim()
                 val url = urlInput.text.toString().trim()
@@ -215,7 +226,8 @@ class MainActivity : AppCompatActivity() {
                     responseLimit = limitInput.text.toString().toIntOrNull() ?: 500,
                     showToast = toastCheck.isChecked,
                     playMp3 = mp3Check.isChecked,
-                    saveClipboard = clipboardCheck.isChecked
+                    saveClipboard = clipboardCheck.isChecked,
+                    showNotification = notificationCheck.isChecked
                 )
                 if (isEdit) {
                     db.dao().update(entry)

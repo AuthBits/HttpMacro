@@ -74,15 +74,15 @@ class TriggerActivity : AppCompatActivity() {
                         // Clipboard: text or image
                         val resultText = saveToClipboard(entry.name, result, limit)
                         val bodySnippet = resultText.take(limit)
-                        showNotification(entry.name, "HTTP ${result.code}\n\n$bodySnippet")
+                        if (entry.showNotification) showNotification(entry.name, "HTTP ${result.code}\n\n$bodySnippet")
                     } else {
                         val bodySnippet = bodyStr.take(limit)
-                        showNotification(entry.name, "HTTP ${result.code}\n\n$bodySnippet")
+                        if (entry.showNotification) showNotification(entry.name, "HTTP ${result.code}\n\n$bodySnippet")
                     }
                 }
             } catch (e: IOException) {
                 runOnUiThread {
-                    showNotification(entry.name, "Error: ${e.message}", true)
+                    if (entry.showNotification) showNotification(entry.name, "Error: ${e.message}", true)
                 }
             }
         }.start()
