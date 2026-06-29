@@ -60,6 +60,12 @@ class MainActivity : AppCompatActivity() {
         }
         val bodyInput = EditText(this).apply { hint = "Body (for POST/PUT)"; inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE; maxLines = 4; setText(macro?.body ?: "") }
 
+        // ---- Use clipboard as body checkbox ----
+        val clipboardBodyCheck = android.widget.CheckBox(this).apply {
+            text = "Use clipboard as body on trigger"
+            isChecked = macro?.clipboardAsBody ?: false
+        }
+
         // ---- Response limit ----
         val limitInput = EditText(this).apply {
             hint = "Response limit (chars)"
@@ -183,6 +189,7 @@ class MainActivity : AppCompatActivity() {
             addView(headersContainer)
             addView(addHeaderBtn)
             addView(bodyInput)
+            addView(clipboardBodyCheck)
 
             // Spacer
             addView(android.widget.Space(this@MainActivity).apply {
@@ -227,7 +234,8 @@ class MainActivity : AppCompatActivity() {
                     showToast = toastCheck.isChecked,
                     playMp3 = mp3Check.isChecked,
                     saveClipboard = clipboardCheck.isChecked,
-                    showNotification = notificationCheck.isChecked
+                    showNotification = notificationCheck.isChecked,
+                    clipboardAsBody = clipboardBodyCheck.isChecked
                 )
                 if (isEdit) {
                     db.dao().update(entry)

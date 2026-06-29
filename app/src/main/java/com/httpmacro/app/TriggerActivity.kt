@@ -52,9 +52,25 @@ class TriggerActivity : AppCompatActivity() {
             Toast.makeText(this, "Firing: ${entry.name}", Toast.LENGTH_SHORT).show()
         }
 
+        // If macro is set to use clipboard as body, grab it now (on main thread for clipboard access)
+        val clipboardBody: String? = if (entry.clipboardAsBody) {
+            val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = cm.primaryClip
+            clip?.getItemAt(0)?.let { item ->
+                if (item.text != null) {
+                    item.text.toString()
+                } else if (item.uri != null) {
+                    // Image on clipboard — read bytes and base64 encode
+                    runCatching {
+                        contentResolver.openInputStream(item.uri!!)?.use { it.readBytes() }
+                    }.getOrNull()?.let { Base64.encodeToString(it, Base64.DEFAULT) }
+                } else null
+            }
+        } else null
+
         Thread {
             try {
-                val result = HttpExecutor.execute(entry)
+                val result = HttpExecutor.execute(entry, clipboardBody)
                 runOnUiThread {
                     val limit = entry.responseLimit.coerceAtLeast(50)
 
